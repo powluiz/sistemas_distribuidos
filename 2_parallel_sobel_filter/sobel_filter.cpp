@@ -9,8 +9,8 @@
 
 using namespace std;
 
-static inline int read_JPEG_file(char *filepath, int *width, int *height,
-                                 int *channels, unsigned char *(image[])) {
+static inline int read_file(char *filepath, int *width, int *height,
+                            int *channels, unsigned char *(image[])) {
     FILE *input_file;
     if ((input_file = fopen(filepath, "rb")) == NULL) {
         fprintf(stderr, "can't open %s\n", filepath);
@@ -38,18 +38,18 @@ static inline int read_JPEG_file(char *filepath, int *width, int *height,
         rowptr[0] = *image + row_stride * compression_info.output_scanline;
         jpeg_read_scanlines(&compression_info, rowptr, 1);
     }
-    jpeg_finish_decompress(&compression_info);
 
+    jpeg_finish_decompress(&compression_info);
     jpeg_destroy_decompress(&compression_info);
     fclose(input_file);
     return 1;
 }
 
-static inline void write_JPEG_file(char *filepath, int width, int height,
-                                   int channels, unsigned char image[],
-                                   int quality) {
-    FILE *outfile;
-    if ((outfile = fopen(filepath, "wb")) == NULL) {
+static inline void write_file(char *filepath, int width, int height,
+                              int channels, unsigned char image[]) {
+    int quality = 100;
+    FILE *output_file;
+    if ((output_file = fopen(filepath, "wb")) == NULL) {
         fprintf(stderr, "can't open %s\n", filepath);
         exit(1);
     }
@@ -58,7 +58,7 @@ static inline void write_JPEG_file(char *filepath, int width, int height,
     struct jpeg_compress_struct cinfo;
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_compress(&cinfo);
-    jpeg_stdio_dest(&cinfo, outfile);
+    jpeg_stdio_dest(&cinfo, output_file);
 
     cinfo.image_width = width;
     cinfo.image_height = height;
@@ -76,7 +76,7 @@ static inline void write_JPEG_file(char *filepath, int width, int height,
     }
     jpeg_finish_compress(&cinfo);
 
-    fclose(outfile);
+    fclose(output_file);
     jpeg_destroy_compress(&cinfo);
 }
 
@@ -90,25 +90,29 @@ int main(int argc, char *argv[]) {
 
     unsigned char *image;
     int width, height, channels;
-    char *filepath = argv[1];
-    read_JPEG_file(filepath, &width, &height, &channels, &image);
+    char *input_path = argv[1];
+    char *output_path = argv[2];
+
+    read_file(input_path, &width, &height, &channels, &image);
 
     if (channels == 3) {
-        unsigned char *image2;
-        image2 =
+        unsigned char *grayscale_image;
+        grayscale_image =
             (unsigned char *)malloc(width * height * channels * sizeof(image));
         channels = 1;
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                image2[i * width + j] = (image[i * width * 3 + j * 3] +
-                                         image[i * width * 3 + j * 3 + 1] +
-                                         image[i * width * 3 + j * 3 + 2]) /
-                                        3;
+                grayscale_image[i * width + j] =
+                    (image[i * width * 3 + j * 3] +
+                     image[i * width * 3 + j * 3 + 1] +
+                     image[i * width * 3 + j * 3 + 2]) /
+                    3;
             }
         }
         free(image);
-        image = image2;
-        write_JPEG_file("./img/output_grayscale.jpg", width, height, channels, image, 95);
+        image = grayscale_image;
+        write_file("./img/output_grayscale.jpg", width, height, channels,
+                   image);
     }
 
     int img2d[height][width];
@@ -168,18 +172,14 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            float abc = (img2dmag[i][j] - min) / (diff * 1.0);
-            img2dmag[i][j] = abc * 255;
-        }
-    }
-
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+            float normalized_value = (img2dmag[i][j] - min) / (diff * 1.0);
+            img2dmag[i][j] = normalized_value * 255;
             image[i * width + j] = img2dmag[i][j];
         }
     }
 
-    write_JPEG_file(argv[2], width, height, channels, image, 95);
+    write_file(output_path, width, height, channels, image);
+
     free(image);
 
     return 0;
