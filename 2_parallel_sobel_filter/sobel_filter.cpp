@@ -1,16 +1,16 @@
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <unistd.h>
 #include <cmath>
 #include <iostream>
-
-// jpeg lib
+#include <vector>
 #include <jpeglib.h>
 
 using namespace std;
 
-static inline int read_file(char *filepath, int *width, int *height,
-                            int *channels, unsigned char *(image[])) {
+static inline int read_file(const char *filepath, int *width, int *height,
+                            int *channels, unsigned char **image) {
     FILE *input_file;
     if ((input_file = fopen(filepath, "rb")) == NULL) {
         fprintf(stderr, "can't open %s\n", filepath);
@@ -22,14 +22,13 @@ static inline int read_file(char *filepath, int *width, int *height,
     compression_info.err = jpeg_std_error(&img_error);
     jpeg_create_decompress(&compression_info);
     jpeg_stdio_src(&compression_info, input_file);
-    (void)jpeg_read_header(&compression_info, TRUE);
-    (void)jpeg_start_decompress(&compression_info);
+    jpeg_read_header(&compression_info, TRUE);
+    jpeg_start_decompress(&compression_info);
 
     *width = compression_info.output_width;
     *height = compression_info.output_height;
     *channels = compression_info.num_components;
-    *image =
-        (unsigned char *)malloc(*width * *height * *channels * sizeof(*image));
+    *image = (unsigned char *)malloc(*width * *height * *channels * sizeof(unsigned char));
 
     JSAMPROW rowptr[1];
     int row_stride = *width * *channels;
@@ -45,8 +44,8 @@ static inline int read_file(char *filepath, int *width, int *height,
     return 1;
 }
 
-static inline void write_file(char *filepath, int width, int height,
-                              int channels, unsigned char image[]) {
+static inline void write_file(const char *filepath, int width, int height,
+                              int channels, unsigned char *image) {
     int quality = 100;
     FILE *output_file;
     if ((output_file = fopen(filepath, "wb")) == NULL) {
@@ -63,7 +62,7 @@ static inline void write_file(char *filepath, int width, int height,
     cinfo.image_width = width;
     cinfo.image_height = height;
     cinfo.input_components = channels;
-    cinfo.in_color_space = channels == 1 ? JCS_GRAYSCALE : JCS_RGB;
+    cinfo.in_color_space = (channels == 1) ? JCS_GRAYSCALE : JCS_RGB;
     jpeg_set_defaults(&cinfo);
     jpeg_set_quality(&cinfo, quality, TRUE);
 
@@ -80,42 +79,34 @@ static inline void write_file(char *filepath, int width, int height,
     jpeg_destroy_compress(&cinfo);
 }
 
-void process_image(int width, int height, int &channels,
-                   unsigned char *&image) {
+void process_image(int width, int height, int &channels, unsigned char *&image) {
     if (channels == 3) {
-        unsigned char *grayscale_image;
-        grayscale_image =
-            (unsigned char *)malloc(width * height * channels * sizeof(image));
+        unsigned char *grayscale_image = (unsigned char *)malloc(width * height * sizeof(unsigned char));
         channels = 1;
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 grayscale_image[i * width + j] =
                     (image[i * width * 3 + j * 3] +
                      image[i * width * 3 + j * 3 + 1] +
-                     image[i * width * 3 + j * 3 + 2]) /
-                    3;
+                     image[i * width * 3 + j * 3 + 2]) / 3;
             }
         }
         free(image);
         image = grayscale_image;
-        // write_file("./img/output_grayscale.jpg", width, height, channels,
-        //  image);
     }
 
-    int img2d[height][width];
+    vector<vector<int>> img2d(height, vector<int>(width));
+    vector<vector<int>> img2dhororg(height, vector<int>(width));
+    vector<vector<int>> img2dverorg(height, vector<int>(width));
+    vector<vector<int>> img2dmag(height, vector<int>(width));
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             img2d[i][j] = image[i * width + j];
         }
     }
-    int img2dhororg[height][width];
-    int img2dverorg[height][width];
-    int img2dmag[height][width];
 
-    /// horizontal
     int max = -200, min = 2000;
-
     for (int i = 1; i < height - 1; i++) {
         for (int j = 1; j < width - 1; j++) {
             int curr = img2d[i - 1][j - 1] + 2 * img2d[i - 1][j] +
@@ -127,10 +118,7 @@ void process_image(int width, int height, int &channels,
         }
     }
 
-    /// vertical:
-    max = -200;
-    min = 2000;
-
+    max = -200; min = 2000;
     for (int i = 1; i < height - 1; i++) {
         for (int j = 1; j < width - 1; j++) {
             int curr = img2d[i - 1][j - 1] + 2 * img2d[i][j - 1] +
@@ -142,10 +130,7 @@ void process_image(int width, int height, int &channels,
         }
     }
 
-    /// magnitude
-    max = -200;
-    min = 2000;
-
+    max = -200; min = 2000;
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             img2dmag[i][j] =
@@ -156,12 +141,10 @@ void process_image(int width, int height, int &channels,
     }
 
     int diff = max - min;
-
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             float normalized_value = (img2dmag[i][j] - min) / (diff * 1.0);
-            img2dmag[i][j] = normalized_value * 255;
-            image[i * width + j] = img2dmag[i][j];
+            image[i * width + j] = static_cast<unsigned char>(normalized_value * 255);
         }
     }
 }
@@ -175,12 +158,13 @@ int main(int argc, char *argv[]) {
     char input_path[256], output_path[256];
 
     for (int i = 0; i < number_of_files; i++) {
-        snprintf(input_path, sizeof(input_path), "%s%d.jpg", base_input_path,
-                 i+1);
-        snprintf(output_path, sizeof(output_path), "%s%d.jpg", base_output_path,
-                 i+1);
+        snprintf(input_path, sizeof(input_path), "%s%d.jpg", base_input_path, i + 1);
+        snprintf(output_path, sizeof(output_path), "%s%d.jpg", base_output_path, i + 1);
 
-        read_file(input_path, &width, &height, &channels, &image);
+        if (!read_file(input_path, &width, &height, &channels, &image)) {
+            fprintf(stderr, "Failed to read %s\n", input_path);
+            continue;
+        }
         process_image(width, height, channels, image);
         write_file(output_path, width, height, channels, image);
         free(image);
