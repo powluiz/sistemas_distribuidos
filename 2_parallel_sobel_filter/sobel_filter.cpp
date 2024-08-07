@@ -80,8 +80,8 @@ static inline void write_file(char *filepath, int width, int height,
     jpeg_destroy_compress(&cinfo);
 }
 
-void process_image(int width, int height, int &channels, unsigned char *&image,
-                   char *output_path) {
+void process_image(int width, int height, int &channels,
+                   unsigned char *&image) {
     if (channels == 3) {
         unsigned char *grayscale_image;
         grayscale_image =
@@ -98,8 +98,8 @@ void process_image(int width, int height, int &channels, unsigned char *&image,
         }
         free(image);
         image = grayscale_image;
-        write_file("./img/output_grayscale.jpg", width, height, channels,
-                   image);
+        // write_file("./img/output_grayscale.jpg", width, height, channels,
+        //  image);
     }
 
     int img2d[height][width];
@@ -164,26 +164,27 @@ void process_image(int width, int height, int &channels, unsigned char *&image,
             image[i * width + j] = img2dmag[i][j];
         }
     }
-
-    write_file(output_path, width, height, channels, image);
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        printf(
-            "Correct usage: ./sobel ./img/sample.jpg "
-            "./img/output.jpg\n");
-        return 1;
-    }
-
     unsigned char *image;
     int width, height, channels;
-    char *input_path = argv[1];
-    char *output_path = argv[2];
+    int number_of_files = 6;
+    const char *base_input_path = "./input/";
+    const char *base_output_path = "./output/";
+    char input_path[256], output_path[256];
 
-    read_file(input_path, &width, &height, &channels, &image);
-    process_image(width, height, channels, image, output_path);
-    free(image);
+    for (int i = 0; i < number_of_files; i++) {
+        snprintf(input_path, sizeof(input_path), "%s%d.jpg", base_input_path,
+                 i+1);
+        snprintf(output_path, sizeof(output_path), "%s%d.jpg", base_output_path,
+                 i+1);
+
+        read_file(input_path, &width, &height, &channels, &image);
+        process_image(width, height, channels, image);
+        write_file(output_path, width, height, channels, image);
+        free(image);
+    }
 
     return 0;
 }

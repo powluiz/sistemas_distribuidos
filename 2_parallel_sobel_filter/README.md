@@ -12,6 +12,6 @@ sudo apt-get install libjpeg-dev
 Para testar:
 
 ```bash
-g++ -O3 sobel_filter.cpp -o sobel -ljpeg -fpermissive
-./sobel ./img/input.jpg ./img/output.jpg
+g++ sobel_filter.cpp -o sobel -ljpeg -fpermissive
+./sobel
 ```
