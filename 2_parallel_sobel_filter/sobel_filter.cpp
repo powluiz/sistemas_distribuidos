@@ -80,21 +80,8 @@ static inline void write_file(char *filepath, int width, int height,
     jpeg_destroy_compress(&cinfo);
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        printf(
-            "Correct usage: ./sobel ./img/sample.jpg "
-            "./img/output.jpg\n");
-        return 1;
-    }
-
-    unsigned char *image;
-    int width, height, channels;
-    char *input_path = argv[1];
-    char *output_path = argv[2];
-
-    read_file(input_path, &width, &height, &channels, &image);
-
+void process_image(int width, int height, int &channels, unsigned char *&image,
+                   char *output_path) {
     if (channels == 3) {
         unsigned char *grayscale_image;
         grayscale_image =
@@ -179,7 +166,23 @@ int main(int argc, char *argv[]) {
     }
 
     write_file(output_path, width, height, channels, image);
+}
 
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        printf(
+            "Correct usage: ./sobel ./img/sample.jpg "
+            "./img/output.jpg\n");
+        return 1;
+    }
+
+    unsigned char *image;
+    int width, height, channels;
+    char *input_path = argv[1];
+    char *output_path = argv[2];
+
+    read_file(input_path, &width, &height, &channels, &image);
+    process_image(width, height, channels, image, output_path);
     free(image);
 
     return 0;
