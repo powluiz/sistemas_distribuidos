@@ -2,6 +2,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <cmath>
@@ -53,6 +54,12 @@ static inline void write_file(const char *filepath, int width, int height,
                               int channels, unsigned char *image) {
     int quality = 100;
     FILE *output_file;
+
+    struct stat st = {0};
+    if (stat("./output", &st) == -1) {
+        mkdir("./output", 0700);
+    }
+
     if ((output_file = fopen(filepath, "wb")) == NULL) {
         fprintf(stderr, "can't open %s\n", filepath);
         exit(1);
