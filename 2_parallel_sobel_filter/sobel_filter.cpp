@@ -164,7 +164,6 @@ int main(int argc, char *argv[]) {
     double start, end;
     unsigned char *image;
     int width, height, channels;
-    int number_of_files = 6;
     int num_of_threads, available_threads;
 
     char input_path[256], output_path[256];
@@ -187,20 +186,32 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(num_of_threads);
     start = omp_get_wtime();
 
-    for (int i = 0; i < number_of_files; i++) {
-        snprintf(input_path, sizeof(input_path), "%s%d.jpg", base_input_path,
-                 i + 1);
-        snprintf(output_path, sizeof(output_path), "%s%d.jpg", base_output_path,
-                 i + 1);
-
-        if (!read_file(input_path, &width, &height, &channels, &image)) {
-            fprintf(stderr, "Failed to read %s\n", input_path);
-            continue;
-        }
-        process_image(width, height, channels, image);
-        write_file(output_path, width, height, channels, image);
-        free(image);
+    // Abrir o diretório de entrada
+    DIR *dir = opendir(base_input_path);
+    if (!dir) {
+        perror("Error while opening input directory");
+        return -1;
     }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) { /*  Confere se o arquivo é regular */
+            snprintf(input_path, sizeof(input_path), "%s%s", base_input_path,
+                     entry->d_name);
+            snprintf(output_path, sizeof(output_path), "%s%s", base_output_path,
+                     entry->d_name);
+
+            if (!read_file(input_path, &width, &height, &channels, &image)) {
+                fprintf(stderr, "Failed to read %s\n", input_path);
+                continue;
+            }
+            process_image(width, height, channels, image);
+            write_file(output_path, width, height, channels, image);
+            free(image);
+        }
+    }
+
+    closedir(dir);
 
     end = omp_get_wtime();
     cout << "Time: " << end - start << endl;

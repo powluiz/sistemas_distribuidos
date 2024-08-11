@@ -16,5 +16,5 @@ g++ sobel_filter.cpp -o sobel -ljpeg -fpermissive
 
 # com openMP
 g++ sobel_filter.cpp -o sobel -ljpeg -fpermissive -fopenmp
-./sobel
+./sobel <num_of_threads>
 ```
