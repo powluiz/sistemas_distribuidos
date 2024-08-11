@@ -13,5 +13,8 @@ Para testar:
 
 ```bash
 g++ sobel_filter.cpp -o sobel -ljpeg -fpermissive
+
+# com openMP
+g++ sobel_filter.cpp -o sobel -ljpeg -fpermissive -fopenmp
 ./sobel
 ```

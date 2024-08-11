@@ -1,10 +1,14 @@
 #include <dirent.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
 #include <cmath>
 #include <iostream>
 #include <vector>
+
+// jpeg lib
 #include <jpeglib.h>
 
 using namespace std;
@@ -28,7 +32,8 @@ static inline int read_file(const char *filepath, int *width, int *height,
     *width = compression_info.output_width;
     *height = compression_info.output_height;
     *channels = compression_info.num_components;
-    *image = (unsigned char *)malloc(*width * *height * *channels * sizeof(unsigned char));
+    *image = (unsigned char *)malloc(*width * *height * *channels *
+                                     sizeof(unsigned char));
 
     JSAMPROW rowptr[1];
     int row_stride = *width * *channels;
@@ -79,16 +84,19 @@ static inline void write_file(const char *filepath, int width, int height,
     jpeg_destroy_compress(&cinfo);
 }
 
-void process_image(int width, int height, int &channels, unsigned char *&image) {
+void process_image(int width, int height, int &channels,
+                   unsigned char *&image) {
     if (channels == 3) {
-        unsigned char *grayscale_image = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+        unsigned char *grayscale_image =
+            (unsigned char *)malloc(width * height * sizeof(unsigned char));
         channels = 1;
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 grayscale_image[i * width + j] =
                     (image[i * width * 3 + j * 3] +
                      image[i * width * 3 + j * 3 + 1] +
-                     image[i * width * 3 + j * 3 + 2]) / 3;
+                     image[i * width * 3 + j * 3 + 2]) /
+                    3;
             }
         }
         free(image);
@@ -118,7 +126,8 @@ void process_image(int width, int height, int &channels, unsigned char *&image) 
         }
     }
 
-    max = -200; min = 2000;
+    max = -200;
+    min = 2000;
     for (int i = 1; i < height - 1; i++) {
         for (int j = 1; j < width - 1; j++) {
             int curr = img2d[i - 1][j - 1] + 2 * img2d[i][j - 1] +
@@ -130,7 +139,8 @@ void process_image(int width, int height, int &channels, unsigned char *&image) 
         }
     }
 
-    max = -200; min = 2000;
+    max = -200;
+    min = 2000;
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             img2dmag[i][j] =
@@ -144,22 +154,44 @@ void process_image(int width, int height, int &channels, unsigned char *&image) 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             float normalized_value = (img2dmag[i][j] - min) / (diff * 1.0);
-            image[i * width + j] = static_cast<unsigned char>(normalized_value * 255);
+            image[i * width + j] =
+                static_cast<unsigned char>(normalized_value * 255);
         }
     }
 }
 
 int main(int argc, char *argv[]) {
+    double start, end;
     unsigned char *image;
     int width, height, channels;
     int number_of_files = 6;
+    int num_of_threads, available_threads;
+
+    char input_path[256], output_path[256];
     const char *base_input_path = "./input/";
     const char *base_output_path = "./output/";
-    char input_path[256], output_path[256];
+
+    if (argc != 2) {
+        cout << "Usage: ./sobel <num_of_threads>" << endl;
+        return -1;
+    }
+
+    available_threads = omp_get_max_threads();
+    num_of_threads = atoi(argv[1]);
+
+    if (num_of_threads > available_threads) {
+        cout << "Requested number of threads is more than available" << endl;
+        return -1;
+    }
+
+    omp_set_num_threads(num_of_threads);
+    start = omp_get_wtime();
 
     for (int i = 0; i < number_of_files; i++) {
-        snprintf(input_path, sizeof(input_path), "%s%d.jpg", base_input_path, i + 1);
-        snprintf(output_path, sizeof(output_path), "%s%d.jpg", base_output_path, i + 1);
+        snprintf(input_path, sizeof(input_path), "%s%d.jpg", base_input_path,
+                 i + 1);
+        snprintf(output_path, sizeof(output_path), "%s%d.jpg", base_output_path,
+                 i + 1);
 
         if (!read_file(input_path, &width, &height, &channels, &image)) {
             fprintf(stderr, "Failed to read %s\n", input_path);
@@ -170,5 +202,7 @@ int main(int argc, char *argv[]) {
         free(image);
     }
 
+    end = omp_get_wtime();
+    cout << "Time: " << end - start << endl;
     return 0;
 }
