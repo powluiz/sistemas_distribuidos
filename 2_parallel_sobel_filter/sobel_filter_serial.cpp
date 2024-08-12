@@ -98,7 +98,6 @@ void process_image(int width, int height, int &channels,
             (unsigned char *)malloc(width * height * sizeof(unsigned char));
         channels = 1;
 
-#pragma omp parallel for collapse(2)
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
                 grayscale_image[i * width + j] =
@@ -118,7 +117,6 @@ void process_image(int width, int height, int &channels,
     vector<vector<int>> img2dverorg(height, vector<int>(width));
     vector<vector<float>> img2dmag(height, vector<float>(width));
 
-#pragma omp parallel for collapse(2)
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             img2d[i][j] = image[i * width + j];
