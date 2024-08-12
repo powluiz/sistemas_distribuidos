@@ -98,7 +98,6 @@ void process_image(int width, int height, int &channels,
             (unsigned char *)malloc(width * height * sizeof(unsigned char));
         channels = 1;
 
-// Paralelizando a conversão para escala de cinza
 #pragma omp parallel for collapse(2)
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
@@ -116,7 +115,7 @@ void process_image(int width, int height, int &channels,
     vector<vector<int>> img2d(height, vector<int>(width));
     vector<vector<int>> img2dhororg(height, vector<int>(width));
     vector<vector<int>> img2dverorg(height, vector<int>(width));
-    vector<vector<int>> img2dmag(height, vector<int>(width));
+    vector<vector<float>> img2dmag(height, vector<float>(width));
 
 #pragma omp parallel for collapse(2)
     for (int i = 0; i < height; i++) {
@@ -126,45 +125,34 @@ void process_image(int width, int height, int &channels,
     }
 
     int max = -200, min = 2000;
-#pragma omp parallel for reduction(max : max) reduction(min : min)
+#pragma omp parallel for collapse(2) reduction(max : max) reduction(min : min)
     for (int i = 1; i < height - 1; i++) {
         for (int j = 1; j < width - 1; j++) {
-            int curr = img2d[i - 1][j - 1] + 2 * img2d[i - 1][j] +
-                       img2d[i - 1][j + 1] - img2d[i + 1][j - 1] -
-                       2 * img2d[i + 1][j] - img2d[i + 1][j + 1];
-            img2dhororg[i][j] = curr;
-            if (curr > max) max = curr;
-            if (curr < min) min = curr;
-        }
-    }
+            // Gradiente horizontal
+            int grad_hor = img2d[i - 1][j - 1] + 2 * img2d[i - 1][j] +
+                           img2d[i - 1][j + 1] - img2d[i + 1][j - 1] -
+                           2 * img2d[i + 1][j] - img2d[i + 1][j + 1];
+            img2dhororg[i][j] = grad_hor;
 
-    max = -200;
-    min = 2000;
-#pragma omp parallel for reduction(max : max) reduction(min : min)
-    for (int i = 1; i < height - 1; i++) {
-        for (int j = 1; j < width - 1; j++) {
-            int curr = img2d[i - 1][j - 1] + 2 * img2d[i][j - 1] +
-                       img2d[i + 1][j - 1] - img2d[i - 1][j + 1] -
-                       2 * img2d[i][j + 1] - img2d[i + 1][j + 1];
-            img2dverorg[i][j] = curr;
-            if (curr > max) max = curr;
-            if (curr < min) min = curr;
-        }
-    }
+            // Gradiente vertical
+            int grad_ver = img2d[i - 1][j - 1] + 2 * img2d[i][j - 1] +
+                           img2d[i + 1][j - 1] - img2d[i - 1][j + 1] -
+                           2 * img2d[i][j + 1] - img2d[i + 1][j + 1];
+            img2dverorg[i][j] = grad_ver;
 
-    max = -200;
-    min = 2000;
-#pragma omp parallel for reduction(max : max) reduction(min : min)
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            img2dmag[i][j] =
-                sqrt(pow(img2dhororg[i][j], 2) + pow(img2dverorg[i][j], 2));
-            if (img2dmag[i][j] > max) max = img2dmag[i][j];
-            if (img2dmag[i][j] < min) min = img2dmag[i][j];
+            // Magnitude
+            float magnitude = sqrt(pow(grad_hor, 2) + pow(grad_ver, 2));
+            img2dmag[i][j] = magnitude;
+
+            // Atualiza max e min
+            if (magnitude > max) max = magnitude;
+            if (magnitude < min) min = magnitude;
         }
     }
 
     int diff = max - min;
+
+// Normalização da imagem
 #pragma omp parallel for collapse(2)
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
