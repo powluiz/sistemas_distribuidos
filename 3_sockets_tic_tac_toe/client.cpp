@@ -42,18 +42,18 @@ int main() {
         cout << "Servidor: " << buffer << endl;
 
         // Se o servidor indicar que o jogo acabou, saia
-        if (strstr(buffer, "venceu") || strstr(buffer, "perdeu") ||
-            strstr(buffer, "Deu velha")) {
-            break;
-        }
+        // if (strstr(buffer, "venceu") || strstr(buffer, "perdeu") ||
+        // strstr(buffer, "Deu velha")) {
+        // break;
+        // }
 
         // Verifica se é a vez do jogador
-        if (strstr(buffer, "vez do Player")) {
-            cout << "Digite o movimento (1-9): ";
-            cin >> message[0];
-            message[1] = '\0';
-            send(sock, message, strlen(message), 0);
-        }
+        // if (strstr(buffer, "vez do Player")) {
+        cout << "Digite o movimento (1-9): ";
+        cin >> message[0];
+        message[1] = '\0';
+        send(sock, message, strlen(message), 0);
+        // }
     }
 
     close(sock);

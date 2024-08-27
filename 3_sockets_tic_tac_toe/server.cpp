@@ -30,7 +30,7 @@ int server_socket;
 int client_socket_1 = -1, client_socket_2 = -1;
 
 int current_player = 1;
-char board[SIZE][SIZE] = {{'1', '2', '3'}, {'4', '5', '6'}, {'7', '8', '9'}};
+char board[SIZE][SIZE] = {{' ', ' ', ' '}, {' ', ' ', ' '}, {' ', ' ', ' '}};
 GAME_STATE game_state = GAME_STATE::WAITING_PLAYERS;
 
 void sendMessage(int client_socket, string message) {
@@ -38,19 +38,24 @@ void sendMessage(int client_socket, string message) {
 }
 
 void printBoard() {
-    string boardStr = "";
-    cout << "Tabuleiro:\n";
+    string board_message = "\n";
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
-            boardStr += board[i][j];
-            cout << board[i][j] << ' ';
+            board_message += board[i][j];
+
+            if (j < SIZE - 1) {
+                board_message += " | ";
+            }
         }
-        boardStr += '\n';
-        cout << '\n';
+
+        if (i < SIZE - 1) {
+            board_message += "\n---------\n";
+        }
     }
 
-    sendMessage(client_socket_1, boardStr);
-    sendMessage(client_socket_2, boardStr);
+    cout << board_message << endl;
+    sendMessage(client_socket_1, board_message);
+    sendMessage(client_socket_2, board_message);
 }
 
 int checkGameStatus() {
@@ -140,18 +145,16 @@ void handleClientActions(int client_socket, int client_number) {
     char playerKey = (client_number == 1) ? 'X' : 'O';
 
     while (true) {
-        cout << "entrou 1" << endl;
-
         memset(buffer, 0, BUFFER_SIZE);
+        cout << "entrou para " << client_number << endl;
         int valread = read(client_socket, buffer, BUFFER_SIZE);
+        cout << "Leu para " << client_number << endl;
 
         if (valread <= 0) {
             cout << "Cliente " << client_number << " desconectado" << endl;
             close(client_socket);
             break;
         }
-
-        cout << "entrou 2" << endl;
 
         if (game_state != GAME_STATE::IN_PROGRESS) {
             sendMessage(client_socket, "Aguarde pelo início da partida.\n");
