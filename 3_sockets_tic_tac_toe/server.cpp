@@ -53,6 +53,7 @@ void printBoard() {
         }
     }
 
+    board_message += "\n\n";
     cout << board_message << endl;
     sendMessage(client_socket_1, board_message);
     sendMessage(client_socket_2, board_message);
@@ -152,7 +153,13 @@ void handleClientActions(int client_socket, int client_number) {
 
         if (valread <= 0) {
             cout << "Cliente " << client_number << " desconectado" << endl;
-            close(client_socket);
+
+            if (client_number == 1) {
+                sendMessage(client_socket_2, "Cliente 1 desconectado.\n");
+            } else {
+                sendMessage(client_socket_1, "Cliente 2 desconectado.\n");
+            }
+            endGame();
             break;
         }
 
