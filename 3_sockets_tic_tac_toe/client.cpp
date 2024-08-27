@@ -9,8 +9,6 @@
 
 using namespace std;
 
-bool is_player_turn = false;
-
 #define PORT 1303
 #define BUFFER_SIZE 1024
 
@@ -26,13 +24,6 @@ void receiveMessages(int sock) {
         }
 
         cout << buffer << endl;
-
-        // Checar se o jogo acabou
-        if (strstr(buffer, "venceu") || strstr(buffer, "perdeu") ||
-            strstr(buffer, "Deu velha")) {
-            cout << "Fim de jogo!" << endl;
-            break;
-        }
     }
 }
 

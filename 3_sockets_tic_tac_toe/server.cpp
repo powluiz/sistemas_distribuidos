@@ -252,9 +252,9 @@ void handleClientConnection(int &clientSocket, int clientNumber) {
 void signalHandler(int signum) {
     close(client_socket_1);
     close(client_socket_2);
-    close(server_socket);  // Fecha o socket do servidor
+    close(server_socket);
     cout << "\nSocket fechado e interrupção do servidor concluída." << endl;
-    exit(signum);  // Encerra o programa com o código do sinal
+    exit(signum);
 }
 
 int main() {
