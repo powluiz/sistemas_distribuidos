@@ -205,7 +205,7 @@ void handleClientActions(int client_socket, int client_number) {
             continue;
         }
 
-        int playerChoice = buffer[0] - '1';  // Converte o char para um inteiro
+        int playerChoice = buffer[0] - '1';
         int row = playerChoice / SIZE;
         int col = playerChoice % SIZE;
 
@@ -217,8 +217,6 @@ void handleClientActions(int client_socket, int client_number) {
             sendMessage(client_socket,
                         "Movimento inválido. Tente novamente.\n");
         }
-
-        // printBoard();
     }
 }
 
