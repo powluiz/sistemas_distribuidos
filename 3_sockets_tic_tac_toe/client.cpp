@@ -22,7 +22,7 @@ void receiveMessages(int sock) {
             cerr << "Conexão perdida." << endl;
             break;
         }
-        cout << "Servidor: " << buffer << endl;
+        cout << buffer << endl;
 
         // Checar se o jogo acabou
         if (strstr(buffer, "venceu") || strstr(buffer, "perdeu") ||
@@ -63,14 +63,14 @@ int main() {
         char message[2] = {0};
         cout << "Digite o movimento (1-9): ";
         cin >> message[0];
-        message[1] = '\0';
 
-        send(sock, message, strlen(message), 0);
-
-        if (strchr(message, 'sair')) {
-            cout << "Saindo do jogo..." << endl;
-            break;
+        if (message[0] < '1' || message[0] > '9') {
+            cerr << "Movimento inválido. Tente novamente.\n" << endl;
+            continue;
         }
+
+        message[1] = '\0';
+        send(sock, message, strlen(message), 0);
     }
 
     recvThread.join();

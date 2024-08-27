@@ -37,6 +37,13 @@ void sendMessage(int client_socket, string message) {
     send(client_socket, message.c_str(), message.length(), 0);
 }
 
+void endGame() {
+    close(client_socket_1);
+    close(client_socket_2);
+    close(server_socket);
+    exit(EXIT_SUCCESS);
+}
+
 void printBoard() {
     string board_message = "\n";
     for (int i = 0; i < SIZE; i++) {
@@ -57,6 +64,29 @@ void printBoard() {
     cout << board_message << endl;
     sendMessage(client_socket_1, board_message);
     sendMessage(client_socket_2, board_message);
+}
+
+void handleTurnChange() {
+    switch (current_player) {
+        case 1:
+            current_player = 2;
+            cout << "Vez do Player 2" << endl;
+            sendMessage(client_socket_2, "Sua vez!\n");
+            sendMessage(client_socket_1, "Vez do Player 2:\n");
+            printBoard();
+            break;
+        case 2:
+            current_player = 1;
+            cout << "Vez do Player 1" << endl;
+            sendMessage(client_socket_1, "Vez do Player 2:\n");
+            sendMessage(client_socket_2, "Sua vez!\n");
+            printBoard();
+            break;
+        default:
+            cout << "Valor inválido para current_player.\n" << endl;
+            endGame();
+            break;
+    }
 }
 
 int checkGameStatus() {
@@ -99,13 +129,6 @@ int checkGameStatus() {
     return -1;
 }
 
-void endGame() {
-    close(client_socket_1);
-    close(client_socket_2);
-    close(server_socket);
-    exit(EXIT_SUCCESS);
-}
-
 void handleGameStatus() {
     int gameStatus = checkGameStatus();
 
@@ -135,8 +158,9 @@ void handleGameStatus() {
 
 void startGame() {
     cout << "Iniciando jogo!" << endl;
-    sendMessage(client_socket_1, "Jogo Iniciado! Vez do Player 1:\n");
-    sendMessage(client_socket_2, "Jogo Iniciado! Vez do Player 1:\n");
+    sendMessage(client_socket_1, "\nJogo Iniciado! Vez do Player 1:\n");
+    sendMessage(client_socket_2,
+                "\nJogo Iniciado! Aguarde a jogada do Player 1:\n");
     game_state = GAME_STATE::IN_PROGRESS;
     printBoard();
 }
@@ -147,9 +171,7 @@ void handleClientActions(int client_socket, int client_number) {
 
     while (true) {
         memset(buffer, 0, BUFFER_SIZE);
-        cout << "entrou para " << client_number << endl;
         int valread = read(client_socket, buffer, BUFFER_SIZE);
-        cout << "Leu para " << client_number << endl;
 
         if (valread <= 0) {
             cout << "Cliente " << client_number << " desconectado" << endl;
@@ -173,15 +195,15 @@ void handleClientActions(int client_socket, int client_number) {
             continue;
         }
 
-        int playerChoice = buffer[0] - '1';
+        int playerChoice = buffer[0] - '1';  // Converte o char para um inteiro
         int row = playerChoice / SIZE;
         int col = playerChoice % SIZE;
 
         if (row >= 0 && row < SIZE && col >= 0 && col < SIZE &&
-            board[row][col] != 'X' && board[row][col] != 'O') {
+            board[row][col] == ' ') {
             board[row][col] = playerKey;
             handleGameStatus();
-            current_player = (current_player + 1) % 2;
+            handleTurnChange();
         } else {
             sendMessage(client_socket,
                         "Movimento inválido. Tente novamente.\n");
@@ -205,12 +227,12 @@ void handleClientConnection(int &clientSocket, int clientNumber) {
     cout << "Cliente " << clientNumber << " conectado!" << endl;
 
     if (clientNumber == 1) {
-        sendMessage(
-            clientSocket,
-            "Você é o jogador 1 (X). Aguarde pela conexão do jogador 2 (O)!\n");
+        sendMessage(clientSocket,
+                    "Você é o jogador 1 (X). Aguarde pela conexão do jogador 2 "
+                    "(O)!\n\n");
     } else {
         sendMessage(clientSocket,
-                    "Jogador 1 (X) já conectado. Você é o jogador 2 (O)!\n");
+                    "Jogador 1 (X) já conectado. Você é o jogador 2 (O)!\n\n");
     }
 
     if (client_socket_1 != -1 && client_socket_2 != -1) {
