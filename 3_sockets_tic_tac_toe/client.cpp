@@ -9,7 +9,9 @@
 
 using namespace std;
 
-#define PORT 8080
+bool is_player_turn = false;
+
+#define PORT 1303
 #define BUFFER_SIZE 1024
 
 // Função para receber mensagens do servidor
@@ -22,6 +24,7 @@ void receiveMessages(int sock) {
             cerr << "Conexão perdida." << endl;
             break;
         }
+
         cout << buffer << endl;
 
         // Checar se o jogo acabou
@@ -34,6 +37,8 @@ void receiveMessages(int sock) {
 }
 
 int main() {
+    system("cls");
+    system("clear");
     int sock = 0;
     struct sockaddr_in serv_addr;
 
@@ -61,7 +66,6 @@ int main() {
     // Thread principal para enviar
     while (true) {
         char message[2] = {0};
-        cout << "Digite o movimento (1-9): ";
         cin >> message[0];
 
         if (message[0] < '1' || message[0] > '9') {

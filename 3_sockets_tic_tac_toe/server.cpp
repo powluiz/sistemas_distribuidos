@@ -10,7 +10,7 @@
 #include <thread>
 #include <vector>
 
-#define PORT 8080
+#define PORT 1303
 #define MAX_CLIENTS 2
 #define SIZE 3
 
@@ -71,7 +71,8 @@ void handleTurnChange() {
         case 1:
             current_player = 2;
             cout << "Vez do Player 2" << endl;
-            sendMessage(client_socket_2, "Sua vez!\n");
+            sendMessage(client_socket_2,
+                        "\033[32mSua vez!\033[0m\nDigite o movimento (1-9):\n");
             sendMessage(client_socket_1, "Vez do Player 2:\n");
             printBoard();
             break;
@@ -79,7 +80,8 @@ void handleTurnChange() {
             current_player = 1;
             cout << "Vez do Player 1" << endl;
             sendMessage(client_socket_1, "Vez do Player 2:\n");
-            sendMessage(client_socket_2, "Sua vez!\n");
+            sendMessage(client_socket_2,
+                        "\033[32mSua vez!\033[0m\nDigite o movimento (1-9):\n");
             printBoard();
             break;
         default:
@@ -134,19 +136,19 @@ void handleGameStatus() {
 
     switch (gameStatus) {
         case 1:
-            cout << "Jogador 1 venceu!" << endl;
-            sendMessage(client_socket_1, "Você venceu!\n");
-            sendMessage(client_socket_2, "Você perdeu!\n");
+            cout << "\nJogador 1 venceu!\n" << endl;
+            sendMessage(client_socket_1, "\033[32mVocê venceu!\033[0m\n");
+            sendMessage(client_socket_2, "\033[31mVocê perdeu!\033[0m\n");
             endGame();
             break;
         case 2:
-            cout << "Jogador 2 venceu!" << endl;
-            sendMessage(client_socket_1, "Você perdeu!\n");
-            sendMessage(client_socket_2, "Você venceu!\n");
+            cout << "\nJogador 2 venceu!\n" << endl;
+            sendMessage(client_socket_1, "\033[31mVocê perdeu!\033[0m\n");
+            sendMessage(client_socket_2, "\033[32mVocê venceu!\033[0m\n");
             endGame();
             break;
         case -1:
-            cout << "Deu velha!" << endl;
+            cout << "\nDeu velha!\n" << endl;
             sendMessage(client_socket_1, "Deu velha!\n");
             sendMessage(client_socket_2, "Deu velha!\n");
             endGame();
@@ -158,9 +160,12 @@ void handleGameStatus() {
 
 void startGame() {
     cout << "Iniciando jogo!" << endl;
-    sendMessage(client_socket_1, "\nJogo Iniciado! Vez do Player 1:\n");
-    sendMessage(client_socket_2,
-                "\nJogo Iniciado! Aguarde a jogada do Player 1:\n");
+    sendMessage(client_socket_1,
+                "\n\033[32mJogo Iniciado!\n\033[0m\nDigite o "
+                "movimento (1-9):\n");
+    sendMessage(
+        client_socket_2,
+        "\n\033[32mJogo Iniciado!\033[0m\nAguarde a jogada do Player 1:\n");
     game_state = GAME_STATE::IN_PROGRESS;
     printBoard();
 }
@@ -209,12 +214,12 @@ void handleClientActions(int client_socket, int client_number) {
                         "Movimento inválido. Tente novamente.\n");
         }
 
-        printBoard();
+        // printBoard();
     }
 }
 
 void handleClientConnection(int &clientSocket, int clientNumber) {
-    cout << "Aguardando conexão do Cliente " << clientNumber << endl;
+    cout << "Aguardando conexão do Cliente " << clientNumber << "\n" << endl;
     socklen_t address_length = sizeof(address);
     int new_socket =
         accept(server_socket, (struct sockaddr *)&address, &address_length);
@@ -224,15 +229,17 @@ void handleClientConnection(int &clientSocket, int clientNumber) {
         exit(EXIT_FAILURE);
     }
     clientSocket = new_socket;
-    cout << "Cliente " << clientNumber << " conectado!" << endl;
+    cout << "Cliente " << clientNumber << " conectado!\n" << endl;
 
     if (clientNumber == 1) {
         sendMessage(clientSocket,
-                    "Você é o jogador 1 (X). Aguarde pela conexão do jogador 2 "
+                    "\n\033[32mVocê é o jogador 1 (X).\033[0m\nAguarde pela "
+                    "conexão do jogador 2 "
                     "(O)!\n\n");
     } else {
         sendMessage(clientSocket,
-                    "Jogador 1 (X) já conectado. Você é o jogador 2 (O)!\n\n");
+                    "Jogador 1 (X) já conectado.\n\033[32mVocê é o jogador 2 "
+                    "(O)!\033[0m\n\n");
     }
 
     if (client_socket_1 != -1 && client_socket_2 != -1) {
@@ -249,6 +256,9 @@ void signalHandler(int signum) {
 }
 
 int main() {
+    system("cls");
+    system("clear");
+
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("Nao foi possivel criar o socket");
         exit(EXIT_FAILURE);
