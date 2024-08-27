@@ -73,14 +73,14 @@ void handleTurnChange() {
             cout << "Vez do Player 2" << endl;
             sendMessage(client_socket_2,
                         "\033[32mSua vez!\033[0m\nDigite o movimento (1-9):\n");
-            sendMessage(client_socket_1, "Vez do Player 2:\n");
+            sendMessage(client_socket_1, "Aguarde sua vez...\n");
             printBoard();
             break;
         case 2:
             current_player = 1;
             cout << "Vez do Player 1" << endl;
-            sendMessage(client_socket_1, "Vez do Player 2:\n");
-            sendMessage(client_socket_2,
+            sendMessage(client_socket_2, "Aguarde sua vez...\n");
+            sendMessage(client_socket_1,
                         "\033[32mSua vez!\033[0m\nDigite o movimento (1-9):\n");
             printBoard();
             break;
@@ -137,29 +137,34 @@ void handleGameStatus() {
     switch (gameStatus) {
         case 1:
             cout << "\nJogador 1 venceu!\n" << endl;
+            printBoard();
             sendMessage(client_socket_1, "\033[32mVocê venceu!\033[0m\n");
             sendMessage(client_socket_2, "\033[31mVocê perdeu!\033[0m\n");
             endGame();
             break;
         case 2:
             cout << "\nJogador 2 venceu!\n" << endl;
+            printBoard();
             sendMessage(client_socket_1, "\033[31mVocê perdeu!\033[0m\n");
             sendMessage(client_socket_2, "\033[32mVocê venceu!\033[0m\n");
             endGame();
             break;
         case -1:
+            printBoard();
             cout << "\nDeu velha!\n" << endl;
             sendMessage(client_socket_1, "Deu velha!\n");
             sendMessage(client_socket_2, "Deu velha!\n");
             endGame();
             break;
         default:
+            handleTurnChange();
             break;
     }
 }
 
 void startGame() {
     cout << "Iniciando jogo!" << endl;
+    current_player = 1;
     sendMessage(client_socket_1,
                 "\n\033[32mJogo Iniciado!\n\033[0m\nDigite o "
                 "movimento (1-9):\n");
@@ -208,7 +213,6 @@ void handleClientActions(int client_socket, int client_number) {
             board[row][col] == ' ') {
             board[row][col] = playerKey;
             handleGameStatus();
-            handleTurnChange();
         } else {
             sendMessage(client_socket,
                         "Movimento inválido. Tente novamente.\n");
@@ -266,9 +270,8 @@ int main() {
 
     signal(SIGINT, signalHandler);
 
-    /* Associa o socket a todos IPs locais e porta */
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;  // Obtem IP do S.O
+    address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
 
     if (bind(server_socket, (struct sockaddr *)&address, sizeof(address)) < 0) {
@@ -276,14 +279,14 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(server_socket, 3) < 0) {
+    if (listen(server_socket, MAX_CLIENTS) < 0) {
         perror("Falha ao colocar em modo de escuta");
         exit(EXIT_FAILURE);
     }
 
     cout << "Servidor está ouvindo na porta " << PORT << endl;
 
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < MAX_CLIENTS; ++i) {
         if (client_socket_1 == -1) {
             handleClientConnection(client_socket_1, 1);
         } else if (client_socket_2 == -1) {
